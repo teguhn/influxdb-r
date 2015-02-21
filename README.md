@@ -1,7 +1,7 @@
 influxdb-r
 ==========
 
-R library for InfluxDB. Currently only supports querying.
+R library for InfluxDB.
 
 Install using devtools:
 
