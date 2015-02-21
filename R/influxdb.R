@@ -4,11 +4,7 @@ NULL
 
 #' Query an InfluxDB database
 #' 
-#' @param host Character vector with IP address or hostname
-#' @param port Port number
-#' @param username InfluxDB user
-#' @param password InfluxDB password (will be passed in plain text)
-#' @param database The name of the database
+#' @param conn A named list containing values of host, port, username, password, and database
 #' @param query Character vector containing the InfluxDB query
 #' @param time_precision Specifies whether the time should be returned in 
 #'   seconds (\code{s}), milliseconds (\code{m}), or microseconds (\code{u}) 
@@ -17,14 +13,14 @@ NULL
 #'   and the data frames contain the points.
 #'
 #' @export
-influxdb_query <- function(host, port, username, password, database, query,
+influxdb.query <- function(conn, query,
                         time_precision=c("s", "m", "u")) {
   response <- GET(
-    "", scheme = "http", hostname = host, port = port,
-    path = sprintf("db/%s/series", URLencode(database)),
+    "", scheme = "http", hostname = conn$host, port = conn$port,
+    path = sprintf("db/%s/series", URLencode(conn$database)),
     query = list(
-      u = username,
-      p = password,
+      u = conn$username,
+      p = conn$password,
       q = query,
       time_precision = match.arg(time_precision),
       chunked = "false"
@@ -54,4 +50,39 @@ influxdb_query <- function(host, port, username, password, database, query,
     structure(list(df), names=seriesObj$name)
   })
   return(responseObjects)
+}
+
+#' Write a data frame into an InfluxDB database
+#' 
+#' @param conn A named list containing values of host, port, username, password, and database
+#' @param series Character vector containing the series name
+#' @param dataframe A data frame containing the points with the column names
+#'
+#' @export
+influxdb.write <- function(conn, series, dataframe){
+  
+  seriesObj <- list()
+  seriesObj$name <- series
+  seriesObj$columns <- names(dataframe)
+  seriesObj$points <- apply(dataframe, 1, function(x){unname(as.list(x))})
+  bodyParam <- structure(list(seriesObj))
+  
+  response <- POST(
+    "", scheme = "http", hostname = conn$host, port = conn$port,
+    path = sprintf("db/%s/series", URLencode(conn$database)),
+    query = list(
+      u = conn$username,
+      p = conn$password
+    ),
+    body = toJSON(bodyParam),
+    encode = "json"
+  )
+  
+  # Check for error. Not familiar enough with httr, there may be other ways it
+  # communicates failure.
+  if (response$status_code < 200 || response$status_code >= 300) {
+    if (length(response$content) > 0)
+      warning(rawToChar(response$content))
+    stop("Influx query failed with HTTP status code ", response$status_code)
+  }
 }

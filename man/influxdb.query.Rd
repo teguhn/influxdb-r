@@ -1,22 +1,12 @@
-\name{influxdb_query}
-\alias{influxdb_query}
+\name{influxdb.query}
+\alias{influxdb.query}
 \title{Query an InfluxDB database}
 \usage{
-  influxdb_query(host, port, username, password, database,
+  influxdb.query(conn,
     query, time_precision = c("s", "m", "u"))
 }
 \arguments{
-  \item{host}{Character vector with IP address or hostname}
-
-  \item{port}{Port number}
-
-  \item{username}{InfluxDB user}
-
-  \item{password}{InfluxDB password (will be passed in
-  plain text)}
-
-  \item{database}{The name of the database}
-
+  \item{conn}{A named list containing values of host, port, username, password, and database}
   \item{query}{Character vector containing the InfluxDB
   query}
 

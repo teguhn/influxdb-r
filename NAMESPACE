@@ -1,3 +1,4 @@
-export(influxdb_query)
+export(influxdb.query)
+export(influxdb.write)
 import(httr)
 import(rjson)
