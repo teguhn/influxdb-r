@@ -5,8 +5,8 @@
   influxdb.write(conn, series, dataframe)
 }
 \arguments{
-  \item{conn}{A named list containing values of host, port, username, password, and database}
-  \item{series}{Character vector containing the series name}
+  \item{connection}{A named list containing values of host, port, username, password, and database}
+  \item{series.name}{Character vector containing the series name}
   \item{dataframe}{A data frame containing the points with the column names}
 }
 \description{

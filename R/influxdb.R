@@ -1,10 +1,10 @@
 #' @import httr
-#' @import rjson
+#' @import RJSONIO
 NULL
 
 #' Query an InfluxDB database
 #' 
-#' @param conn A named list containing values of host, port, username, password, and database
+#' @param connection A named list containing values of host, port, username, password, and database
 #' @param query Character vector containing the InfluxDB query
 #' @param time_precision Specifies whether the time should be returned in 
 #'   seconds (\code{s}), milliseconds (\code{m}), or microseconds (\code{u}) 
@@ -13,8 +13,7 @@ NULL
 #'   and the data frames contain the points.
 #'
 #' @export
-influxdb.query <- function(conn, query,
-                        time_precision=c("s", "m", "u")) {
+influxdb.query <- function(connection, query, time_precision=c("s", "m", "u"), stringsAsFactors=FALSE) {
   response <- GET(
     "", scheme = "http", hostname = conn$host, port = conn$port,
     path = sprintf("db/%s/series", URLencode(conn$database)),
@@ -27,25 +26,18 @@ influxdb.query <- function(conn, query,
     )
   )
   
-  # Check for error. Not familiar enough with httr, there may be other ways it
-  # communicates failure.
-  if (response$status_code < 200 || response$status_code >= 300) {
-    if (length(response$content) > 0)
-      warning(rawToChar(response$content))
-    stop("Influx query failed with HTTP status code ", response$status_code)
-  }
+  check.reponse(response)
   
-  response_data <- fromJSON(rawToChar(response$content))
+  response_data <- fromJSON(rawToChar(response$content), nullValue=NA)
   
   # response_data at this point is a hot mess of nested lists; turn it into
   # something nicer to work with. I'm sure there is a faster/better way to
   # do this.
   responseObjects <- sapply(response_data, function(seriesObj) {
-    # TODO: Should stringsAsFactors be used or not?
     df <- as.data.frame(t(sapply(seriesObj$points, rbind)))
     # It's a data frame but each column is a list instead of atomic vector; 
     # let's fix that
-    df <- as.data.frame(lapply(df, unlist))
+    df <- as.data.frame(lapply(df, unlist), stringsAsFactors=stringsAsFactors)
     names(df) <- seriesObj$columns
     structure(list(df), names=seriesObj$name)
   })
@@ -54,15 +46,15 @@ influxdb.query <- function(conn, query,
 
 #' Write a data frame into an InfluxDB database
 #' 
-#' @param conn A named list containing values of host, port, username, password, and database
-#' @param series Character vector containing the series name
+#' @param connection A named list containing values of host, port, username, password, and database
+#' @param series.name Character vector containing the series name
 #' @param dataframe A data frame containing the points with the column names
 #'
 #' @export
-influxdb.write <- function(conn, series, dataframe){
+influxdb.write <- function(connection, series.name, dataframe, time_precision=c("s", "m", "u")){
   
   seriesObj <- list()
-  seriesObj$name <- series
+  seriesObj$name <- series.name
   seriesObj$columns <- names(dataframe)
   seriesObj$points <- apply(dataframe, 1, function(x){unname(as.list(x))})
   bodyParam <- structure(list(seriesObj))
@@ -72,12 +64,18 @@ influxdb.write <- function(conn, series, dataframe){
     path = sprintf("db/%s/series", URLencode(conn$database)),
     query = list(
       u = conn$username,
-      p = conn$password
+      p = conn$password,
+      time_precision = match.arg(time_precision)
     ),
     body = toJSON(bodyParam),
     encode = "json"
   )
   
+  check.reponse(response)
+
+}
+
+check.reponse <- function(response){
   # Check for error. Not familiar enough with httr, there may be other ways it
   # communicates failure.
   if (response$status_code < 200 || response$status_code >= 300) {

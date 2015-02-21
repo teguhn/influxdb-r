@@ -2,11 +2,10 @@
 \alias{influxdb.query}
 \title{Query an InfluxDB database}
 \usage{
-  influxdb.query(conn,
-    query, time_precision = c("s", "m", "u"))
+  influxdb.query(conn, query, time_precision = c("s", "m", "u"), stringsAsFactors)
 }
 \arguments{
-  \item{conn}{A named list containing values of host, port, username, password, and database}
+  \item{connection}{A named list containing values of host, port, username, password, and database}
   \item{query}{Character vector containing the InfluxDB
   query}
 
