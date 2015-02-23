@@ -43,6 +43,12 @@ influxdb.query <- function(connection, query, time_precision=c("s", "m", "u"), s
   })
   return(responseObjects)
 }
+drop_names <- function(x){
+    x_list <- as.list(x)
+    x_list[sapply(x_list, is.na)] <- list(NULL) ## Transforms NA values into NULL. This is required for toJSON  to provide the rigth representation of missing data
+    names(x_list) <-NULL
+    x_list
+}
 
 #' Write a data frame into an InfluxDB database
 #' 
@@ -56,7 +62,11 @@ influxdb.write <- function(connection, series.name, dataframe, time_precision=c(
   seriesObj <- list()
   seriesObj$name <- series.name
   seriesObj$columns <- names(dataframe)
-  seriesObj$points <- apply(dataframe, 1, function(x){unname(as.list(x))})
+  split_list <- split(dataframe, 1:nrow(dataframe)) 
+  
+  # We need to drop all names from the points structure 
+  # for json output
+  seriesObj$points<-mapply(drop_names,split_list,USE.NAMES = FALSE,SIMPLIFY = FALSE)
   bodyParam <- structure(list(seriesObj))
   
   response <- POST(
@@ -74,7 +84,6 @@ influxdb.write <- function(connection, series.name, dataframe, time_precision=c(
   check.reponse(response)
 
 }
-
 check.reponse <- function(response){
   # Check for error. Not familiar enough with httr, there may be other ways it
   # communicates failure.
